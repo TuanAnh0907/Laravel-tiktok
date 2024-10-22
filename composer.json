@@ -1,0 +1,38 @@
+{
+  "name": "tuan-anh/laravel-tiktok",
+  "description": "One package for TikTok using API version 2.0",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "tuananh",
+    "laravel-tiktok",
+    "API"
+  ],
+  "autoload": {
+    "psr-4": {
+      "TuanAnh\\LaravelTiktok\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Phạm Tuấn Anh",
+      "email": "tuananhtybg.99@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^8.0",
+    "ext-curl": "*",
+    "ext-fileinfo": "*",
+    "guzzlehttp/guzzle": "*",
+    "illuminate/database": "*",
+    "illuminate/support": "*"
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}
