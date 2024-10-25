@@ -3,9 +3,9 @@
 namespace TuanAnh\LaravelTiktok;
 
 use Illuminate\Support\Facades\Cache;
-use TuanAnh\LaravelTikTok\Responses\TokenInfo;
-use TuanAnh\LaravelTikTok\Responses\CreatorQuery;
-use TuanAnh\LaravelTikTok\Responses\PublishStatus;
+use TuanAnh\LaravelTiktok\Responses\TokenInfo;
+use TuanAnh\LaravelTiktok\Responses\CreatorQuery;
+use TuanAnh\LaravelTiktok\Responses\PublishStatus;
 use Exception;
 
 class Connector

@@ -3,8 +3,8 @@
 namespace TuanAnh\LaravelTiktok\Uploads;
 
 use Exception;
-use TuanAnh\LaravelTikTok\Connector;
-use TuanAnh\LaravelTikTok\Responses\PublishInfo;
+use TuanAnh\LaravelTiktok\Connector;
+use TuanAnh\LaravelTiktok\Responses\PublishInfo;
 
 class VideoFromUrl
 {

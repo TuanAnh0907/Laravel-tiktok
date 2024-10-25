@@ -12,7 +12,7 @@
 namespace TuanAnh\LaravelTiktok\Responses;
 
 use Exception;
-use TuanAnh\LaravelTikTok\Connector;
+use TuanAnh\LaravelTiktok\Connector;
 
 class CreatorQuery
 {
