@@ -1,10 +1,8 @@
 <?php
 
-namespace TuanAnh\LaravelTikTok;
+namespace TuanAnh\LaravelTiktok;
 
-use Illuminate\Support\Facades\Session;
-use JsonException;
-use RuntimeException;
+use Illuminate\Support\Facades\Cache;
 use TuanAnh\LaravelTikTok\Responses\TokenInfo;
 use TuanAnh\LaravelTikTok\Responses\CreatorQuery;
 use TuanAnh\LaravelTikTok\Responses\PublishStatus;
@@ -134,12 +132,12 @@ class Connector
     public static function fromIni(string $path): Connector
     {
         if (!file_exists($path)) {
-            throw new RuntimeException('Ini file not found in requested path: '.$path);
+            throw new \Exception('Ini file not found in requested path: '.$path);
         }
         $cfg = parse_ini_file($path);
         foreach (self::INI_REQUIRED as $required_info) {
             if (!isset($cfg[$required_info])) {
-                throw new RuntimeException('Ini file is missing required info: '.$required_info);
+                throw new \Exception('Ini file is missing required info: '.$required_info);
             }
         }
         return new self($cfg[self::INI_CLIENT_ID], $cfg[self::INI_CLIENT_SECRET], $cfg[self::INI_REDIRECT_URI]);
@@ -154,17 +152,16 @@ class Connector
      * @return string the URL to which you need to redirect the user
      * @throws Exception If the requested permissions are wrongly formatter
      */
-    public function getRedirect(array $permissions = [self::PERMISSION_USER_BASIC]): string
+    public function getRedirect(array $permissions = [self::PERMISSION_USER_BASIC])
     {
         foreach ($permissions as $permission) {
-            if (!in_array($permission, self::VALID_PERMISSIONS, true)) {
-                throw new RuntimeException('Invalid Permission Requested. Valid permissions are: '.implode(", ",
+            if (!in_array($permission, self::VALID_PERMISSIONS)) {
+                throw new \Exception('Invalid Permission Requested. Valid permissions are: '.implode(", ",
                         self::VALID_PERMISSIONS));
             }
         }
-
         $state = uniqid();
-        Session::put(self::SESS_STATE, $state);
+        Cache::put(self::SESS_STATE, $state, 60 * 60);
         return sprintf(self::BASE_REDIRECT_URL, $this->client_id, implode(",", $permissions),
             urlencode($this->redirect), $state);
     }
@@ -187,17 +184,16 @@ class Connector
      * Set the Token and User ID within the class for further use
      *
      * @param  string  $code  contains the code received via the GET parameter
-     * @param  string  $state  contains the code received via the GET parameter
      * @return TokenInfo the Access Token Info
      * @throws Exception If the STATE is not valid or if the API return error
      */
     public function verifyCode(string $code, string $state): TokenInfo
     {
-        if (!Session::exists(self::SESS_STATE)) {
-            throw new RuntimeException('Missing State Session');
+        if (!Cache::has(self::SESS_STATE)) {
+            throw new \Exception('Missing State Session');
         }
-        if (Session::get(self::SESS_STATE) !== $state) {
-            throw new RuntimeException('Invalid State Variable, Session: '.Session::get(self::SESS_STATE).' vs ',
+        if (Cache::get(self::SESS_STATE) !== $state) {
+            throw new \Exception('Invalid State Variable, Session: '.Cache::get(self::SESS_STATE).' vs ',
                 $state);
         }
 
@@ -210,7 +206,7 @@ class Connector
                 'redirect_uri'  => $this->redirect
             ];
             $res   = self::post(self::BASE_AUTH_URL, $data);
-            $json  = json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            $json  = json_decode($res);
             $token = TokenInfo::fromJson($json);
             if ($token->getAccessToken()) {
                 $this->setToken($token->getAccessToken());
@@ -218,9 +214,9 @@ class Connector
                 return $token;
             }
 
-            throw new RuntimeException('TikTok Api Error: '.$json->error_description);
+            throw new \Exception('TikTok Api Error: '.$json->error_description);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -273,9 +269,10 @@ class Connector
      * Retrieves the updated Access Token from the Refresh Token
      *
      * @param  string  $refresh_token  the refresh token
-     * @return TokenInfo|false contains the info about the token
+     * @return TokenInfo contains the info about the token
+     * @throws Exception
      */
-    public function refreshToken(string $refresh_token): TokenInfo|false
+    public function refreshToken(string $refresh_token)
     {
         try {
             $data  = [
@@ -285,15 +282,15 @@ class Connector
                 'refresh_token' => $refresh_token
             ];
             $res   = self::post(self::BASE_AUTH_URL, $data);
-            $json  = json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            $json  = json_decode($res);
             $token = TokenInfo::fromJson($json);
-            if (!$token->getAccessToken()) {
+            if (!$token || !$token->getAccessToken()) {
                 return false;
             }
             $this->setToken($token->getAccessToken());
             return $token;
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -310,16 +307,16 @@ class Connector
         ]
     ): object {
         foreach ($fields as $f) {
-            if (!in_array($f, self::FIELDS_U_ALL, true)) {
-                throw new RuntimeException('TikTok Api Error: Invalid field '.$f);
+            if (!in_array($f, self::FIELDS_U_ALL)) {
+                throw new \Exception('TikTok Api Error: Invalid field '.$f);
             }
         }
         try {
             $url = sprintf(self::BASE_USER_URL, implode(',', $fields));
             $res = $this->getWithAuth($url);
-            return json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            return json_decode($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -331,7 +328,7 @@ class Connector
      * @return object the JSON containing the user data
      * @throws Exception If the API returns an error
      */
-    public function getUserVideosInfo(int $cursor = 0, int $num_results = 20, array $fields = self::FIELDS_ALL): object
+    public function getUserVideosInfo(int $cursor = 0, int $num_results = 20, array $fields = self::FIELDS_ALL)
     {
         if ($num_results < 1) {
             $num_results = 20;
@@ -343,9 +340,9 @@ class Connector
             ];
             $url  = sprintf(self::BASE_VIDEOS_URL, implode(',', $fields));
             $res  = $this->postWithAuth($url, $data);
-            return json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            return json_decode($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -355,8 +352,9 @@ class Connector
      * @param  integer  $video_id  the id of the video
      * @param  array  $fields  array containing the list of fields you'd like returned
      * @return object the JSON info of the video or empty
+     * @throws Exception
      */
-    public function getSingleVideoInfo(int $video_id, array $fields = self::FIELDS_ALL): object
+    public function getSingleVideoInfo(int $video_id, array $fields = self::FIELDS_ALL)
     {
         try {
             $data = [
@@ -366,13 +364,13 @@ class Connector
             ];
             $url  = sprintf(self::BASE_VIDEO_QUERY_URL, implode(',', $fields));
             $res  = $this->postWithAuth($url, $data);
-            $json = json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            $json = json_decode($res);
             if (empty($json->data->videos[0])) {
-                return json_decode('{}', false, 512, JSON_THROW_ON_ERROR);
+                return json_decode('{}');
             }
             return $json->data->videos[0];
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -390,7 +388,7 @@ class Connector
             $json = $this->getSingleVideoInfo($video_id, $fields);
             return Video::fromJson($json);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -418,7 +416,7 @@ class Connector
                 'videos'   => $videos
             ];
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -451,7 +449,7 @@ class Connector
             }
             return $videos;
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -472,7 +470,7 @@ class Connector
             $json = $this->getUserInfo($fields);
             return User::fromJson($json, $get_username);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -480,14 +478,15 @@ class Connector
      * Mandatory query to call to retrieve user info before upload. Returns a JSON object that you can parse based on your app logic
      *
      * @return object Json Array with info
+     * @throws Exception
      */
-    public function getCreatorQueryInfo(): object
+    public function getCreatorQueryInfo()
     {
         try {
             $res = $this->postWithAuth(self::BASE_CREATOR_QUERY, []);
-            return json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            return json_decode($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -503,7 +502,7 @@ class Connector
             $res = $this->getCreatorQueryInfo();
             return CreatorQuery::fromJson($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -528,7 +527,7 @@ class Connector
         bool $auto_add_music = false
     ): object {
         if (!self::isValidPrivacyLevel($privacy_level)) {
-            throw new RuntimeException('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
+            throw new \Exception('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
                     self::VALID_PRIVACY));
         }
         try {
@@ -549,9 +548,9 @@ class Connector
                 'media_type'  => 'PHOTO'
             ];
             $res  = $this->postWithAuth(self::BASE_PHOTO_PUBLISH, $data);
-            return json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            return json_decode($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -578,7 +577,7 @@ class Connector
         int $video_cover_timestamp_ms = 1000
     ): object {
         if (!self::isValidPrivacyLevel($privacy_level)) {
-            throw new RuntimeException('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
+            throw new \Exception('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
                     self::VALID_PRIVACY));
         }
         try {
@@ -599,7 +598,7 @@ class Connector
             $res  = $this->postWithAuth(self::BASE_POST_PUBLISH, $data);
             return json_decode($res, false, 512, JSON_THROW_ON_ERROR);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -619,15 +618,15 @@ class Connector
         try {
             $res = $this->postWithAuth(self::BASE_PUBLISH_STATUS, $data);
             if (!$res) {
-                throw new RuntimeException('TikTok Api Error, invalid returned value '.var_export($res, 1));
+                throw new \Exception('TikTok Api Error, invalid returned value '.var_export($res, 1));
             }
             $res = json_decode($res, false, 512, JSON_THROW_ON_ERROR);
             if (!$res) {
-                throw new RuntimeException('TikTok Api Error, invalid JSON '.$res);
+                throw new \Exception('TikTok Api Error, invalid JSON '.$res);
             }
             return PublishStatus::fromJSON($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -644,7 +643,7 @@ class Connector
         while (true) {
             sleep($interval);
             $PublishStatus = $this->checkPublishStatus($publish_id);
-            if ($PublishStatus->getStatus() === PublishStatus::STATUS_DOWNLOADING || $PublishStatus->getStatus() === PublishStatus::STATUS_UPLOADING) {
+            if ($PublishStatus->getStatus() == PublishStatus::STATUS_DOWNLOADING || $PublishStatus->getStatus() == PublishStatus::STATUS_UPLOADING) {
                 continue;
             }
             return $PublishStatus;
@@ -655,9 +654,9 @@ class Connector
      * Get protected resources via GET, passing the oAuth token
      *
      * @param  string  $url  The URL to call
-     * @return false|string the Response of the call or false
+     * @return bool|string the Responses of the call or false
      */
-    private function getWithAuth(string $url): false|string
+    private function getWithAuth(string $url): bool|string
     {
         $headers = [
             'Authorization: Bearer '.$this->getToken()
@@ -671,9 +670,9 @@ class Connector
      * @param  string  $url  The URL to call
      * @param  array  $data  the array containing the POST data in associative format [key: value]
      * @return false|string the Response of the call or false
-     * @throws JsonException
+     * @throws \JsonException
      */
-    public function postWithAuth(string $url, array $data): false|string
+    public function postWithAuth(string $url, array $data): bool|string
     {
         $headers = [
             'Authorization: Bearer '.$this->getToken()
@@ -700,9 +699,9 @@ class Connector
      *
      * @param  string  $url  The URL to call
      * @param  array  $headers  optional headers
-     * @return false|string the Response of the call or false
+     * @return bool|string the Responses of the call or false
      */
-    private static function get(string $url, array $headers = []): false|string
+    private static function get(string $url, array $headers = []): bool|string
     {
         $curl = curl_init();
 
@@ -737,9 +736,9 @@ class Connector
      * @param  array  $headers  additional headers to pass to the CURL call
      * @param  bool  $is_json  whether to send this as JSON body
      * @return false|string the Response of the call or false
-     * @throws JsonException
+     * @throws \JsonException
      */
-    private static function post(string $url, array $data, array $headers = [], bool $is_json = false): false|string
+    private static function post(string $url, array $data, array $headers = [], bool $is_json = false): bool|string
     {
         $curl      = curl_init();
         $headers[] = 'Cache-Control: no-cache';

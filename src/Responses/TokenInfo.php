@@ -1,6 +1,6 @@
 <?php
 
-namespace TuanAnh\LaravelTikTok\Responses;
+namespace TuanAnh\LaravelTiktok\Responses;
 
 use Exception;
 
@@ -42,7 +42,7 @@ class TokenInfo
     public static function fromJson(object $json): TokenInfo
     {
         if (empty($json->access_token) || empty($json->open_id)) {
-            throw new \RuntimeException('Invalid TikTok JSON: '.var_export($json, 1));
+            throw new \Exception('Invalid TikTok JSON: '.var_export($json, 1));
         }
         $access_token       = $json->access_token;
         $open_id            = $json->open_id;

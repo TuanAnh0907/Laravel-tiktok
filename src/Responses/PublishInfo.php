@@ -1,9 +1,8 @@
 <?php
 
-namespace TuanAnh\LaravelTikTok\Responses;
+namespace TuanAnh\LaravelTiktok\Responses;
 
 use Exception;
-use RuntimeException;
 
 class PublishInfo
 {
@@ -42,9 +41,9 @@ class PublishInfo
     public static function fromJson(object $json): PublishInfo
     {
         if (empty($json->error->code)) {
-            throw new RuntimeException('Invalid TikTok JSON: '.var_export($json, 1));
+            throw new \Exception('Invalid TikTok JSON: '.var_export($json, 1));
         }
-        if ($json->error->code === self::NO_ERRORS) {
+        if ($json->error->code == self::NO_ERRORS) {
             $success    = true;
             $error_code = '';
         } else {

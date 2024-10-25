@@ -9,146 +9,157 @@
  * with this source code in the file LICENSE.
  */
 
-namespace TuanAnh\LaravelTikTok\Responses;
+namespace TuanAnh\LaravelTiktok\Responses;
 
 use Exception;
-use RuntimeException;
 use TuanAnh\LaravelTikTok\Connector;
 
-class CreatorQuery {
-	private string $avatar_url;
-	private string $nickname;
-	private string $username;
-	private bool $duet_off;
-	private bool $stitch_off;
-	private bool $comment_off;
-	private int $max_video_duration_sec;
-	private array $privacy_options;
+class CreatorQuery
+{
+    private string $avatar_url;
+    private string $nickname;
+    private string $username;
+    private bool   $duet_off;
+    private bool   $stitch_off;
+    private bool   $comment_off;
+    private int    $max_video_duration_sec;
+    private array  $privacy_options;
 
-	public function __construct(string $avatar_url, string $nickname, string $username, bool $duet_off, bool $stitch_off, bool $comment_off, int $max_video_duration_sec, array $privacy_options) {
-		$this->avatar_url = $avatar_url;
-		$this->nickname = $nickname;
-		$this->username = $username;
-		$this->duet_off = $duet_off;
-		$this->stitch_off = $stitch_off;
-		$this->comment_off = $comment_off;
-		$this->max_video_duration_sec = $max_video_duration_sec;
-		$this->privacy_options = $privacy_options;
-	}
+    public function __construct(
+        string $avatar_url,
+        string $nickname,
+        string $username,
+        bool $duet_off,
+        bool $stitch_off,
+        bool $comment_off,
+        int $max_video_duration_sec,
+        array $privacy_options
+    ) {
+        $this->avatar_url             = $avatar_url;
+        $this->nickname               = $nickname;
+        $this->username               = $username;
+        $this->duet_off               = $duet_off;
+        $this->stitch_off             = $stitch_off;
+        $this->comment_off            = $comment_off;
+        $this->max_video_duration_sec = $max_video_duration_sec;
+        $this->privacy_options        = $privacy_options;
+    }
 
-	/**
-	 * Returns a CreatorQuery object containing all the info of the Creator necessary to publish content
-	 *
-	 * @param object $json returned by the `post/publish/creator_info/query/` endpoint
-	 * @return CreatorQuery
-	 * @throws Exception
-	 */
-	public static function fromJson(object $json): CreatorQuery
+    /**
+     * Returns a CreatorQuery object containing all the info of the Creator necessary to publish content
+     *
+     * @param  object  $json  returned by the `post/publish/creator_info/query/` endpoint
+     * @return CreatorQuery
+     * @throws Exception
+     */
+    public static function fromJson(object $json): CreatorQuery
     {
-		if (empty($json->data) || empty($json->data->creator_nickname)) {
-			throw new RuntimeException('Invalid TikTok JSON: '.var_export($json, 1));
-		}
-		$data = $json->data;
-		$options = [];
-		foreach ($data->privacy_level_options as $option_id) {
-			if (Connector::isValidPrivacyLevel($option_id)) {
-				$options[] = $option_id;
-			}
-		}
-		return new self($data->creator_avatar_url, $data->creator_nickname, $data->creator_username, (bool) $data->duet_disabled, (bool) $data->stitch_disabled, (bool) $data->comment_disabled, (int) $data->max_video_post_duration_sec, $options);
-	}
+        if (empty($json->data) || empty($json->data->creator_nickname)) {
+            throw new \Exception('Invalid TikTok JSON: '.var_export($json, 1));
+        }
+        $data    = $json->data;
+        $options = [];
+        foreach ($data->privacy_level_options as $option_id) {
+            if (Connector::isValidPrivacyLevel($option_id)) {
+                $options[] = $option_id;
+            }
+        }
+        return new self($data->creator_avatar_url, $data->creator_nickname, $data->creator_username,
+            (bool) $data->duet_disabled, (bool) $data->stitch_disabled, (bool) $data->comment_disabled,
+            (int) $data->max_video_post_duration_sec, $options);
+    }
 
-	/**
-	 * Checks if the creator can publish with the provided privacy option
-	 *
-	 * @param string $option
-	 * @return bool
-	 */
-	public function hasPrivacyOption(string $option): bool
+    /**
+     * Checks if the creator can publish with the provided privacy option
+     *
+     * @param  string  $option
+     * @return bool
+     */
+    public function hasPrivacyOption(string $option): bool
     {
-		if (in_array($option, $this->getPrivacyOptions(), true)) {
-			return true;
-		}
-		return false;
-	}
+        if (in_array($option, $this->getPrivacyOptions())) {
+            return true;
+        }
+        return false;
+    }
 
-	/**
-	 * Get the Avatar URL
-	 *
-	 * @return string the avatar url
-	 */
-	public function getAvatarUrl(): string
+    /**
+     * Get the Avatar URL
+     *
+     * @return string the avatar url
+     */
+    public function getAvatarUrl(): string
     {
-		return $this->avatar_url;
-	}
+        return $this->avatar_url;
+    }
 
-	/**
-	 * Get the Nickname value
-	 *
-	 * @return string the nickname
-	 */
-	public function getNickname(): string
+    /**
+     * Get the Nickname value
+     *
+     * @return string the nickname
+     */
+    public function getNickname(): string
     {
-		return $this->nickname;
-	}
+        return $this->nickname;
+    }
 
-	/**
-	 * Get the Username
-	 *
-	 * @return string the username
-	 */
-	public function getUsername(): string
+    /**
+     * Get the Username
+     *
+     * @return string the username
+     */
+    public function getUsername(): string
     {
-		return $this->username;
-	}
+        return $this->username;
+    }
 
-	/**
-	 * Returns if Duet is turned off
-	 *
-	 * @return bool duet is off
-	 */
-	public function isDuetOff(): bool
+    /**
+     * Returns if Duet is turned off
+     *
+     * @return bool duet is off
+     */
+    public function isDuetOff(): bool
     {
-		return $this->duet_off;
-	}
+        return $this->duet_off;
+    }
 
-	/**
-	 * Returns if Stitch is turned off
-	 *
-	 * @return bool stitch is off
-	 */
-	public function isStitchOff(): bool
+    /**
+     * Returns if Stitch is turned off
+     *
+     * @return bool stitch is off
+     */
+    public function isStitchOff(): bool
     {
-		return $this->stitch_off;
-	}
+        return $this->stitch_off;
+    }
 
-	/**
-	 * Returns if Comments are turned off
-	 *
-	 * @return bool comments are off
-	 */
-	public function areCommentsOff(): bool
+    /**
+     * Returns if Comments are turned off
+     *
+     * @return bool comments are off
+     */
+    public function areCommentsOff(): bool
     {
-		return $this->comment_off;
-	}
+        return $this->comment_off;
+    }
 
-	/**
-	 * Get the maximum duration of videos in seconds
-	 *
-	 * @return int max duration of video in seconds
-	 */
-	public function getMaxVideoDuration(): int
+    /**
+     * Get the maximum duration of videos in seconds
+     *
+     * @return int max duration of video in seconds
+     */
+    public function getMaxVideoDuration(): int
     {
-		return $this->max_video_duration_sec;
-	}
+        return $this->max_video_duration_sec;
+    }
 
-	/**
-	 * Get all the valid privacy options for the user
-	 *
-	 * @return array privacy options
-	 */
-	public function getPrivacyOptions(): array
+    /**
+     * Get all the valid privacy options for the user
+     *
+     * @return array privacy options
+     */
+    public function getPrivacyOptions(): array
     {
-		return $this->privacy_options;
-	}
+        return $this->privacy_options;
+    }
 }

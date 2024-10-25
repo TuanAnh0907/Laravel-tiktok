@@ -9,10 +9,9 @@
  * with this source code in the file LICENSE.
  */
 
-namespace TuanAnh\LaravelTikTok\Responses;
+namespace TuanAnh\LaravelTiktok\Responses;
 
 use Exception;
-use RuntimeException;
 
 class PublishStatus
 {
@@ -59,10 +58,10 @@ class PublishStatus
     public static function fromJson(object $json): PublishStatus
     {
         if (empty($json->error->code)) {
-            throw new RuntimeException('Invalid TikTok JSON: '.var_export($json, 1));
+            throw new \Exception('Invalid TikTok JSON: '.var_export($json, 1));
         }
         $error_message = '';
-        if ($json->error->code !== self::NO_ERRORS) {
+        if ($json->error->code != self::NO_ERRORS) {
             if (!empty($json->error->message)) {
                 $error_message = $json->error->message;
             }
@@ -73,9 +72,9 @@ class PublishStatus
             return new self(false, '', '', $json->error->code, $error_message, $log_id);
         }
         if (empty($json->data->status)) {
-            throw new RuntimeException('Invalid TikTok JSON: '.var_export($json, 1));
+            throw new \Exception('Invalid TikTok JSON: '.var_export($json, 1));
         }
-        if ($json->data->status === self::FAILED) {
+        if ($json->data->status == self::FAILED) {
             $reason = '';
             if (!empty($json->data->fail_reason)) {
                 $reason = $json->data->fail_reason;

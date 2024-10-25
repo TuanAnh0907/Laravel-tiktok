@@ -1,9 +1,8 @@
 <?php
 
-namespace TuanAnh\LaravelTikTok\Uploads;
+namespace TuanAnh\LaravelTiktok\Uploads;
 
 use Exception;
-use RuntimeException;
 use TuanAnh\LaravelTikTok\Connector;
 use TuanAnh\LaravelTikTok\Responses\PublishInfo;
 
@@ -31,7 +30,7 @@ class VideoFromUrl
         bool $is_brand_organic = false
     ) {
         if (!Connector::isValidPrivacyLevel($privacy_level)) {
-            throw new RuntimeException('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
+            throw new \Exception('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
                     Connector::VALID_PRIVACY));
         }
         $this->url                      = $url;
@@ -59,17 +58,17 @@ class VideoFromUrl
     {
         $CreatorQuery = $tk->getCreatorQuery();
         if (!$CreatorQuery->hasPrivacyOption($this->getPrivacyLevel())) {
-            throw new RuntimeException('TikTok Error: This Creator cannot publish with the privacy level '.implode(', ',
+            throw new \Exception('TikTok Error: This Creator cannot publish with the privacy level '.implode(', ',
                     $CreatorQuery->getPrivacyOptions()));
         }
         if ($CreatorQuery->areCommentsOff() && !$this->getCommentsOff()) {
-            throw new RuntimeException('TikTok Error: This Creator cannot publish without turning off the Comments');
+            throw new \Exception('TikTok Error: This Creator cannot publish without turning off the Comments');
         }
         if ($CreatorQuery->isDuetOff() && !$this->getDuetOff()) {
-            throw new RuntimeException('TikTok Error: This Creator cannot publish without turning off Duet');
+            throw new \Exception('TikTok Error: This Creator cannot publish without turning off Duet');
         }
         if ($CreatorQuery->isStitchOff() && !$this->getStitchOff()) {
-            throw new RuntimeException('TikTok Error: This Creator cannot publish without turning off Stitch');
+            throw new \Exception('TikTok Error: This Creator cannot publish without turning off Stitch');
         }
         return $this->publishWithoutChecks($tk);
     }
@@ -130,15 +129,15 @@ class VideoFromUrl
             ];
             $res  = $tk->postWithAuth(Connector::BASE_POST_PUBLISH, $data);
             if (!$res) {
-                throw new RuntimeException('TikTok Api Error, invalid returned value '.var_export($res, 1));
+                throw new \Exception('TikTok Api Error, invalid returned value '.var_export($res, 1));
             }
-            $res = json_decode($res, false, 512, JSON_THROW_ON_ERROR);
+            $res = json_decode($res);
             if (!$res) {
-                throw new RuntimeException('TikTok Api Error, invalid JSON '.$res);
+                throw new \Exception('TikTok Api Error, invalid JSON '.$res);
             }
             return PublishInfo::fromJSON($res);
         } catch (Exception $e) {
-            throw new RuntimeException('TikTok Api Error: '.$e->getMessage());
+            throw new \Exception('TikTok Api Error: '.$e->getMessage());
         }
     }
 
@@ -242,7 +241,7 @@ class VideoFromUrl
     public function setPrivacyLevel(string $privacy_level): void
     {
         if (!Connector::isValidPrivacyLevel($privacy_level)) {
-            throw new RuntimeException('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
+            throw new \Exception('TikTok Invalid Privacy Level Provided: '.$privacy_level.". Must be: ".implode(', ',
                     Connector::VALID_PRIVACY));
         }
         $this->privacy_level = $privacy_level;

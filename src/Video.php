@@ -1,6 +1,6 @@
 <?php
 
-namespace TuanAnh\LaravelTikTok;
+namespace TuanAnh\LaravelTiktok;
 
 class Video
 {
