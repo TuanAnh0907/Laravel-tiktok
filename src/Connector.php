@@ -161,9 +161,10 @@ class Connector
             }
         }
         $state = uniqid();
-        Cache::put(self::SESS_STATE, $state, 60 * 60);
+        $key   = self::SESS_STATE.'_'.time();
+        Cache::put($key, $state, 3 * 60);
         return sprintf(self::BASE_REDIRECT_URL, $this->client_id, implode(",", $permissions),
-            urlencode($this->redirect), $state);
+            urlencode($this->redirect), $key, $state);
     }
 
     /**
@@ -187,14 +188,13 @@ class Connector
      * @return TokenInfo the Access Token Info
      * @throws Exception If the STATE is not valid or if the API return error
      */
-    public function verifyCode(string $code, string $state): TokenInfo
+    public function verifyCode(string $code, string $key, string $state): TokenInfo
     {
-        if (!Cache::has(self::SESS_STATE)) {
+        if (!Cache::has($key)) {
             throw new \Exception('Missing State Session');
         }
-        if (Cache::get(self::SESS_STATE) !== $state) {
-            throw new \Exception('Invalid State Variable, Session: '.Cache::get(self::SESS_STATE).' vs ',
-                $state);
+        if (Cache::get($key) !== $state) {
+            throw new \Exception('Invalid State Variable, Session: '.Cache::get($key).' vs ', $state);
         }
 
         try {
